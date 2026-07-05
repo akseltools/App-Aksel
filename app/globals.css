@@ -1,0 +1,234 @@
+/**
+ * globals.css
+ * Aksel Tools global styles.
+ * - Overrides shadcn/ui CSS variables to match the black/red brand palette.
+ * - Sets base typography and scrollbar styles.
+ * - Imports Outfit font from Google Fonts.
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================================
+   CSS CUSTOM PROPERTIES — shadcn/ui variable overrides (dark theme only)
+   ============================================================================ */
+:root {
+  /* We always use dark mode — variables defined once here */
+  --background:        10 10 10;    /* #0a0a0a */
+  --foreground:        255 255 255; /* #ffffff */
+
+  --card:              20 20 20;    /* #141414 */
+  --card-foreground:   255 255 255;
+
+  --popover:           26 26 26;    /* #1a1a1a */
+  --popover-foreground: 255 255 255;
+
+  /* Primary = Aksel Red */
+  --primary:           220 38 38;   /* #dc2626 */
+  --primary-foreground: 255 255 255;
+
+  --secondary:         26 26 26;
+  --secondary-foreground: 161 161 170;
+
+  --muted:             26 26 26;
+  --muted-foreground:  113 113 122; /* zinc-500 */
+
+  --accent:            31 31 31;
+  --accent-foreground: 255 255 255;
+
+  --destructive:       220 38 38;
+  --destructive-foreground: 255 255 255;
+
+  --border:            42 42 42;    /* #2a2a2a */
+  --input:             31 31 31;    /* #1f1f1f */
+  --ring:              220 38 38;   /* red ring on focus */
+
+  --radius: 0.5rem;
+
+  /* Chart colors */
+  --chart-1: 220 38 38;
+  --chart-2: 239 68 68;
+  --chart-3: 185 28 28;
+  --chart-4: 127 29 29;
+  --chart-5: 69 10 10;
+}
+
+/* ============================================================================
+   BASE LAYER — Global element defaults
+   ============================================================================ */
+@layer base {
+  * {
+    @apply border-border;
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: #0a0a0a;
+    color: #ffffff;
+    font-family: 'Outfit', system-ui, sans-serif;
+    font-size: 16px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Heading scale */
+  h1 { @apply text-3xl font-bold tracking-tight; }
+  h2 { @apply text-2xl font-semibold tracking-tight; }
+  h3 { @apply text-xl font-semibold; }
+  h4 { @apply text-lg font-medium; }
+
+  /* Focus visible ring — red glow for accessibility */
+  :focus-visible {
+    outline: 2px solid #dc2626;
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+}
+
+/* ============================================================================
+   CUSTOM SCROLLBAR — dark + red accent
+   ============================================================================ */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #111111;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #2a2a2a;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #dc2626;
+}
+
+/* ============================================================================
+   COMPONENT LAYER — Reusable utility classes
+   ============================================================================ */
+@layer components {
+  /* Card base */
+  .aksel-card {
+    @apply bg-background-card border border-border rounded-lg p-4 shadow-card transition-shadow duration-200;
+  }
+
+  .aksel-card:hover {
+    @apply shadow-card-hover;
+  }
+
+  /* Primary action button */
+  .btn-aksel-primary {
+    @apply bg-aksel-600 text-white font-semibold px-4 py-2 rounded-md
+           transition-all duration-200 ease-out
+           hover:bg-aksel-700 hover:-translate-y-0.5 hover:shadow-aksel-sm
+           active:translate-y-0 active:scale-[0.98]
+           disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none;
+  }
+
+  /* Ghost button */
+  .btn-aksel-ghost {
+    @apply text-zinc-400 font-medium px-4 py-2 rounded-md
+           transition-all duration-200 ease-out
+           hover:bg-background-hover hover:text-white
+           active:scale-[0.98];
+  }
+
+  /* Low stock table row — alert styling */
+  .row-low-stock {
+    @apply bg-red-950/40 border-l-4 border-l-aksel-600;
+  }
+
+  /* Navigation item — active state */
+  .nav-item-active {
+    @apply text-aksel-500 bg-aksel-950/40 border-l-2 border-l-aksel-500;
+  }
+
+  /* Sidebar navigation base */
+  .nav-item {
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium text-zinc-400
+           transition-all duration-150 ease-out cursor-pointer
+           hover:text-white hover:bg-background-hover;
+  }
+
+  /* Status badge */
+  .badge-pending {
+    @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold
+           bg-yellow-950/60 text-yellow-400 border border-yellow-800/50;
+  }
+
+  .badge-paid {
+    @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold
+           bg-green-950/60 text-green-400 border border-green-800/50;
+  }
+
+  /* Table styles */
+  .aksel-table-header {
+    @apply text-xs font-semibold uppercase tracking-wider text-zinc-500 border-b border-border;
+  }
+
+  .aksel-table-row {
+    @apply border-b border-border/50 transition-colors duration-150 hover:bg-background-hover;
+  }
+
+  /* Input overrides for dark theme */
+  .aksel-input {
+    @apply bg-background-tertiary border border-border text-white placeholder:text-zinc-600
+           rounded-md px-3 py-2 text-sm
+           focus:outline-none focus:ring-2 focus:ring-aksel-600 focus:border-transparent
+           transition-all duration-150;
+  }
+}
+
+/* ============================================================================
+   ACCESSIBILITY — Respect reduced motion preference
+   ============================================================================ */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ============================================================================
+   UTILITIES LAYER — one-off helpers
+   ============================================================================ */
+@layer utilities {
+  /* Gradient text — red */
+  .text-gradient-red {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 50%, #b91c1c 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Glass card */
+  .glass-dark {
+    background: rgba(20, 20, 20, 0.8);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(42, 42, 42, 0.8);
+  }
+
+  /* Red glow effect */
+  .glow-red {
+    box-shadow: 0 0 20px rgba(220, 38, 38, 0.3);
+  }
+
+  /* Fade in animation utility */
+  .animate-fade-in {
+    animation: fade-in 0.25s ease-out;
+  }
+}
