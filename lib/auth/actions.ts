@@ -338,3 +338,52 @@ export async function deleteUserAction(
     return { success: false, error: "Erro interno. Tente novamente." };
   }
 }
+
+// ─── Change User Role Action (Admin only) ───────────────────────────────────
+/**
+ * Changes a user's role (admin <-> representative). Admin-only.
+ */
+export async function changeUserRoleAction(
+  targetUserId: string,
+  newRole: "admin" | "representative"
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const session = await getSession();
+    if (!session.user || session.user.role !== "admin") {
+      return { success: false, error: "Acesso negado. Apenas administradores podem alterar perfis." };
+    }
+
+    // Prevent changing own role (lockout protection)
+    if (session.user.id === targetUserId) {
+      return { success: false, error: "Você não pode alterar o seu próprio perfil." };
+    }
+
+    if (newRole !== "admin" && newRole !== "representative") {
+      return { success: false, error: "Perfil inválido." };
+    }
+
+    const supabase = await createServerClient();
+
+    // Set RLS context as admin
+    await supabase.rpc("set_session_context", {
+      p_user_id: session.user.id,
+      p_user_role: session.user.role,
+    });
+
+    const { error } = await supabase
+      .from("users")
+      .update({ role: newRole })
+      .eq("id", targetUserId);
+
+    if (error) {
+      console.error("[changeUserRoleAction] DB error:", error);
+      return { success: false, error: "Erro ao alterar perfil do usuário." };
+    }
+
+    return { success: true };
+  } catch (err) {
+    console.error("[changeUserRoleAction] Unexpected error:", err);
+    return { success: false, error: "Erro interno. Tente novamente." };
+  }
+}
+

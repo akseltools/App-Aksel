@@ -9,7 +9,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth/context";
 import { createBrowserClient } from "@/lib/supabase/client";
-import { resetPinAction, createUserAction, toggleUserStatusAction, deleteUserAction } from "@/lib/auth/actions";
+import { resetPinAction, createUserAction, toggleUserStatusAction, deleteUserAction, changeUserRoleAction } from "@/lib/auth/actions";
 import { useToast } from "@/hooks/use-toast";
 import RoleGuard from "@/components/shared/RoleGuard";
 import { TableSkeleton } from "@/components/shared/LoadingSpinner";
@@ -261,6 +261,102 @@ function DeleteUserButton({
   );
 }
 
+// ─── Change Role Button/Dialog (Admin only) ──────────────────────────────────
+function ChangeRoleButton({
+  targetUser,
+  currentUser,
+  onSuccess,
+}: {
+  targetUser: UserRow;
+  currentUser: any;
+  onSuccess: () => void;
+}) {
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
+  const [open, setOpen] = useState(false);
+
+  const newRole = targetUser.role === "admin" ? "representative" : "admin";
+  const newRoleLabel = newRole === "admin" ? "Administrador" : "Representante";
+
+  const handleRoleChange = async () => {
+    setIsLoading(true);
+    const result = await changeUserRoleAction(targetUser.id, newRole);
+    if (result.success) {
+      toast({
+        title: "Perfil alterado!",
+        description: `O perfil de ${targetUser.full_name ?? targetUser.username} foi alterado para ${newRoleLabel}.`,
+      });
+      setOpen(false);
+      onSuccess();
+    } else {
+      toast({
+        title: "Erro ao alterar perfil",
+        description: result.error,
+        variant: "destructive",
+      });
+    }
+    setIsLoading(false);
+  };
+
+  const isSelf = currentUser?.id === targetUser.id;
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button
+          variant="ghost"
+          size="sm"
+          disabled={isLoading || isSelf}
+          className="h-8 text-xs gap-1.5 text-zinc-400 hover:text-white"
+          title={isSelf ? "Você não pode alterar seu próprio perfil" : `Alterar perfil para ${newRoleLabel}`}
+        >
+          {targetUser.role === "admin" ? (
+            <>
+              <User className="h-3.5 w-3.5 text-zinc-400" />
+              Tornar Repres.
+            </>
+          ) : (
+            <>
+              <ShieldCheck className="h-3.5 w-3.5 text-aksel-400" />
+              Tornar Admin
+            </>
+          )}
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="bg-[#141414] border-[#2a2a2a] text-white max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Alterar Perfil de Usuário</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 mt-2">
+          <p className="text-zinc-400 text-sm">
+            Tem certeza que deseja alterar o perfil de{" "}
+            <span className="font-bold text-white">{targetUser.full_name ?? targetUser.username}</span> de{" "}
+            <span className="font-bold text-zinc-300">{targetUser.role === "admin" ? "Administrador" : "Representante"}</span> para{" "}
+            <span className="font-bold text-aksel-400">{newRoleLabel}</span>?
+          </p>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setOpen(false)}
+              className="flex-1 border-[#2a2a2a] text-zinc-300 hover:bg-[#2a2a2a]"
+              disabled={isLoading}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleRoleChange}
+              disabled={isLoading}
+              className="flex-1 bg-aksel-600 hover:bg-aksel-700 text-white font-semibold"
+            >
+              {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirmar"}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // ─── Create User Dialog ───────────────────────────────────────────────────────
 function CreateUserDialog({ onSuccess }: { onSuccess: () => void }) {
   const { toast } = useToast();
@@ -424,6 +520,7 @@ export default function UsersPage() {
                           {u.is_active ? (
                             <>
                               <PinResetDialog targetUser={u} onSuccess={fetchUsers} />
+                              <ChangeRoleButton targetUser={u} currentUser={currentUser} onSuccess={fetchUsers} />
                               <UserStatusToggleButton targetUser={u} currentUser={currentUser} onSuccess={fetchUsers} />
                             </>
                           ) : (
