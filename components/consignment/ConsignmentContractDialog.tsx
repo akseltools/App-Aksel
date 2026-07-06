@@ -340,7 +340,7 @@ export default function ConsignmentContractDialog({
                   )}
                 </div>
 
-                <div className="border border-[#2a2a2a] rounded-lg bg-[#0e0e0e] overflow-hidden relative">
+                <div className="border border-[#2a2a2a] rounded-lg bg-white overflow-hidden relative">
                   <canvas
                     ref={canvasRef}
                     onMouseDown={startDrawing}
@@ -349,10 +349,10 @@ export default function ConsignmentContractDialog({
                     onTouchStart={startDrawing}
                     onTouchMove={draw}
                     onTouchEnd={stopDrawing}
-                    className="w-full h-[200px] sm:h-[240px] cursor-crosshair touch-none"
+                    className="w-full h-[320px] sm:h-[200px] cursor-crosshair touch-none"
                   />
                   {!signatureData && (
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none text-zinc-700 text-xs select-none">
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none text-zinc-400 text-xs select-none">
                       Assine aqui (Mouse ou Touchscreen)
                     </div>
                   )}
