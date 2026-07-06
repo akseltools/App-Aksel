@@ -40,8 +40,12 @@ import {
   Trash2,
   RotateCcw,
   Pencil,
+  ChevronDown,
+  ChevronUp,
+  FileDown,
 } from "lucide-react";
 import type { ProductRow } from "@/lib/supabase/types";
+import ConsignmentContractDialog from "@/components/consignment/ConsignmentContractDialog";
 
 // ─── New Consignment Form ─────────────────────────────────────────────────────
 interface CartItem {
@@ -678,9 +682,15 @@ export default function ConsignmentPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [editConsignment, setEditConsignment] = useState<any | null>(null);
+  const [expandedConsignments, setExpandedConsignments] = useState<Record<string, boolean>>({});
+  const [exportConsignment, setExportConsignment] = useState<any | null>(null);
 
   const open = consignments.filter((c) => c.status === "open");
   const closed = consignments.filter((c) => c.status === "closed");
+
+  const toggleExpand = (id: string) => {
+    setExpandedConsignments((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
 
   const handleDeleteConsignment = async (consignment: any) => {
     if (!confirm(`Tem certeza que deseja excluir a consignação para "${consignment.store_name}"? Qualquer ferramenta não devolvida será retornada ao estoque.`)) {
@@ -792,17 +802,26 @@ export default function ConsignmentPage() {
                 const items = (consignment.consignment_items ?? []) as any[];
                 const totalValue = items.reduce((s, i) => s + i.quantity_sold * i.unit_price, 0);
                 const totalSent = items.reduce((s, i) => s + i.quantity_sent, 0);
+                const isExpanded = !!expandedConsignments[consignment.id];
+
+                const activeItems = items.filter((item) => item.quantity_sent - item.quantity_returned > 0);
+                const returnedItems = items.filter((item) => item.quantity_sent - item.quantity_returned === 0);
 
                 return (
                   <div key={consignment.id} className="bg-[#141414] border border-[#2a2a2a] rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <div>
-                        <h3 className="font-semibold text-white">{consignment.store_name}</h3>
-                        <p className="text-xs text-zinc-500">
-                          Enviado em {new Date(consignment.sent_at).toLocaleDateString("pt-BR")} · {totalSent} peça(s)
-                        </p>
+                    <div className="flex items-center justify-between cursor-pointer select-none" onClick={() => toggleExpand(consignment.id)}>
+                      <div className="flex items-center gap-3">
+                        <div className="text-zinc-400 hover:text-white transition-colors">
+                          {isExpanded ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-white hover:text-zinc-200 transition-colors">{consignment.store_name}</h3>
+                          <p className="text-xs text-zinc-500 mt-0.5">
+                            Enviado em {new Date(consignment.sent_at).toLocaleDateString("pt-BR")} · {totalSent} peça(s)
+                          </p>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-4" onClick={(e) => e.stopPropagation()}>
                         <div className="text-right">
                           <p className="text-sm font-semibold text-aksel-400 tabular-nums">
                             {formatCurrency(totalValue)}
@@ -810,6 +829,15 @@ export default function ConsignmentPage() {
                           <p className="text-xs text-zinc-600">valor em aberto</p>
                         </div>
                         <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setExportConsignment(consignment)}
+                            className="h-8 w-8 text-zinc-400 hover:text-white"
+                            title="Exportar Contrato"
+                          >
+                            <FileDown className="h-4 w-4" />
+                          </Button>
                           <Button
                             variant="ghost"
                             size="icon"
@@ -836,25 +864,59 @@ export default function ConsignmentPage() {
                       </div>
                     </div>
 
-                    {/* Items */}
-                    <div className="divide-y divide-[#1f1f1f]">
-                      {items.map((item) => (
-                        <div key={item.id} className="flex items-center justify-between py-2 text-sm">
-                          <div className="flex-1">
-                            <span className="text-zinc-300">{item.products?.name}</span>
-                            <span className="text-zinc-600 ml-2 text-xs">
-                              {item.quantity_sent} env · {item.quantity_returned} dev · {item.quantity_sold} vendido
-                            </span>
+                    {/* Collapsible Content */}
+                    {isExpanded && (
+                      <div className="mt-4 border-t border-[#1f1f1f] pt-4 space-y-4">
+                        {activeItems.length > 0 && (
+                          <div className="space-y-2">
+                            <h4 className="text-xs font-semibold text-green-400 uppercase tracking-wider">
+                              Ferramentas em Posse ({activeItems.length})
+                            </h4>
+                            <div className="divide-y divide-[#1f1f1f] bg-[#1a1a1a]/40 rounded-lg border border-[#2a2a2a] px-3">
+                              {activeItems.map((item) => (
+                                <div key={item.id} className="flex items-center justify-between py-2.5 text-sm">
+                                  <div className="flex-1">
+                                    <span className="text-zinc-300 font-medium">{item.products?.name}</span>
+                                    <span className="text-zinc-500 ml-2 text-xs">
+                                      {item.quantity_sent} env · {item.quantity_returned} dev · {item.quantity_sold} vendido
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-white font-semibold tabular-nums">
+                                      {formatCurrency(item.quantity_sold * item.unit_price)}
+                                    </span>
+                                    <ReturnDialog item={item} onSuccess={mutate} />
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-white font-medium tabular-nums">
-                              {formatCurrency(item.quantity_sold * item.unit_price)}
-                            </span>
-                            <ReturnDialog item={item} onSuccess={mutate} />
+                        )}
+
+                        {returnedItems.length > 0 && (
+                          <div className="space-y-2">
+                            <h4 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
+                              Ferramentas Devolvidas / Sem Estoque ({returnedItems.length})
+                            </h4>
+                            <div className="divide-y divide-[#1f1f1f] bg-[#1a1a1a]/20 rounded-lg border border-[#2a2a2a]/50 px-3 opacity-55">
+                              {returnedItems.map((item) => (
+                                <div key={item.id} className="flex items-center justify-between py-2 text-sm">
+                                  <div className="flex-1">
+                                    <span className="text-zinc-400 line-through">{item.products?.name}</span>
+                                    <span className="text-zinc-600 ml-2 text-xs">
+                                      Totalmente devolvido ({item.quantity_returned} dev)
+                                    </span>
+                                  </div>
+                                  <span className="text-zinc-500 font-medium tabular-nums">
+                                    {formatCurrency(0)}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                      ))}
-                    </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -878,60 +940,114 @@ export default function ConsignmentPage() {
                 const items = (consignment.consignment_items ?? []) as any[];
                 const totalValue = items.reduce((s, i) => s + i.quantity_sold * i.unit_price, 0);
                 const totalSent = items.reduce((s, i) => s + i.quantity_sent, 0);
+                const isExpanded = !!expandedConsignments[consignment.id];
+
+                const activeItems = items.filter((item) => item.quantity_sent - item.quantity_returned > 0);
+                const returnedItems = items.filter((item) => item.quantity_sent - item.quantity_returned === 0);
 
                 return (
                   <div key={consignment.id} className="bg-[#141414] border border-[#2a2a2a] rounded-lg p-4 opacity-75">
-                    <div className="flex items-center justify-between mb-3">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-semibold text-white">{consignment.store_name}</h3>
-                          <Badge className="bg-green-500/10 text-green-400 border-green-500/30 font-normal">
-                            Pago
-                          </Badge>
+                    <div className="flex items-center justify-between cursor-pointer select-none" onClick={() => toggleExpand(consignment.id)}>
+                      <div className="flex items-center gap-3">
+                        <div className="text-zinc-400 hover:text-white transition-colors">
+                          {isExpanded ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
                         </div>
-                        <p className="text-xs text-zinc-500 mt-1">
-                          Enviado em {new Date(consignment.sent_at).toLocaleDateString("pt-BR")} · {totalSent} peça(s)
-                        </p>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-semibold text-white hover:text-zinc-200 transition-colors">{consignment.store_name}</h3>
+                            <Badge className="bg-green-500/10 text-green-400 border-green-500/30 font-normal">
+                              Pago
+                            </Badge>
+                          </div>
+                          <p className="text-xs text-zinc-500 mt-1">
+                            Enviado em {new Date(consignment.sent_at).toLocaleDateString("pt-BR")} · {totalSent} peça(s)
+                          </p>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-4" onClick={(e) => e.stopPropagation()}>
                         <div className="text-right">
                           <p className="text-sm font-semibold text-green-400 tabular-nums">
                             {formatCurrency(totalValue)}
                           </p>
                           <p className="text-xs text-zinc-600">pago / finalizado</p>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          disabled={deletingId === consignment.id}
-                          onClick={() => handleDeleteConsignment(consignment)}
-                          className="h-8 w-8 text-zinc-400 hover:text-red-400"
-                        >
-                          {deletingId === consignment.id ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Trash2 className="h-4 w-4" />
-                          )}
-                        </Button>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setExportConsignment(consignment)}
+                            className="h-8 w-8 text-zinc-400 hover:text-white"
+                            title="Exportar Contrato"
+                          >
+                            <FileDown className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            disabled={deletingId === consignment.id}
+                            onClick={() => handleDeleteConsignment(consignment)}
+                            className="h-8 w-8 text-zinc-400 hover:text-red-400"
+                          >
+                            {deletingId === consignment.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
                       </div>
                     </div>
 
-                    {/* Items */}
-                    <div className="divide-y divide-[#1f1f1f] pointer-events-none">
-                      {items.map((item) => (
-                        <div key={item.id} className="flex items-center justify-between py-2 text-sm">
-                          <div className="flex-1">
-                            <span className="text-zinc-400">{item.products?.name}</span>
-                            <span className="text-zinc-600 ml-2 text-xs">
-                              {item.quantity_sent} env · {item.quantity_returned} dev · {item.quantity_sold} vendido
-                            </span>
+                    {/* Collapsible Content */}
+                    {isExpanded && (
+                      <div className="mt-4 border-t border-[#1f1f1f] pt-4 space-y-4">
+                        {activeItems.length > 0 && (
+                          <div className="space-y-2">
+                            <h4 className="text-xs font-semibold text-green-400/80 uppercase tracking-wider">
+                              Ferramentas Entregues ({activeItems.length})
+                            </h4>
+                            <div className="divide-y divide-[#1f1f1f] bg-[#1a1a1a]/40 rounded-lg border border-[#2a2a2a] px-3">
+                              {activeItems.map((item) => (
+                                <div key={item.id} className="flex items-center justify-between py-2 text-sm">
+                                  <div className="flex-1">
+                                    <span className="text-zinc-400">{item.products?.name}</span>
+                                    <span className="text-zinc-600 ml-2 text-xs">
+                                      {item.quantity_sent} env · {item.quantity_returned} dev · {item.quantity_sold} vendido
+                                    </span>
+                                  </div>
+                                  <span className="text-zinc-400 font-medium tabular-nums">
+                                    {formatCurrency(item.quantity_sold * item.unit_price)}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
                           </div>
-                          <span className="text-zinc-400 font-medium tabular-nums">
-                            {formatCurrency(item.quantity_sold * item.unit_price)}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
+                        )}
+
+                        {returnedItems.length > 0 && (
+                          <div className="space-y-2">
+                            <h4 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
+                              Ferramentas Devolvidas / Sem Estoque ({returnedItems.length})
+                            </h4>
+                            <div className="divide-y divide-[#1f1f1f] bg-[#1a1a1a]/20 rounded-lg border border-[#2a2a2a]/50 px-3 opacity-55">
+                              {returnedItems.map((item) => (
+                                <div key={item.id} className="flex items-center justify-between py-2 text-sm">
+                                  <div className="flex-1">
+                                    <span className="text-zinc-500 line-through">{item.products?.name}</span>
+                                    <span className="text-zinc-600 ml-2 text-xs">
+                                      Totalmente devolvido ({item.quantity_returned} dev)
+                                    </span>
+                                  </div>
+                                  <span className="text-zinc-600 font-medium tabular-nums">
+                                    {formatCurrency(0)}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -949,6 +1065,12 @@ export default function ConsignmentPage() {
           setEditConsignment(null);
           mutate();
         }}
+      />
+
+      {/* Contract Dialog */}
+      <ConsignmentContractDialog
+        consignment={exportConsignment}
+        onClose={() => setExportConsignment(null)}
       />
     </div>
   );
