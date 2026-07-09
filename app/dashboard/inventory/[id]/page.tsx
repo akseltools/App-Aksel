@@ -8,6 +8,7 @@ import { notFound, redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/actions";
 import { createServerClient, setSessionContext } from "@/lib/supabase/server";
 import ProductForm from "@/components/inventory/ProductForm";
+import StockAdjustmentForm from "@/components/inventory/StockAdjustmentForm";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { ArrowLeft, Package } from "lucide-react";
 import Link from "next/link";
@@ -87,10 +88,19 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Edit form */}
-        <div className="bg-[#141414] border border-[#2a2a2a] rounded-lg p-5">
-          <h2 className="text-base font-semibold text-white mb-4">Editar Produto</h2>
-          <ProductForm product={product} />
+        {/* Left Column: Forms */}
+        <div className="space-y-6">
+          {/* Edit form */}
+          <div className="bg-[#141414] border border-[#2a2a2a] rounded-lg p-5">
+            <h2 className="text-base font-semibold text-white mb-4">Editar Produto</h2>
+            <ProductForm product={product} />
+          </div>
+
+          {/* Stock Adjustment form */}
+          <div className="bg-[#141414] border border-[#2a2a2a] rounded-lg p-5">
+            <h2 className="text-base font-semibold text-white mb-4">Ajustar Estoque</h2>
+            <StockAdjustmentForm product={product} />
+          </div>
         </div>
 
         {/* Price summary cards */}
